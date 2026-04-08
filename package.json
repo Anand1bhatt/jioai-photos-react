@@ -7,7 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist --repo git@github.com:anandbhatt2024-ai/jioai-photos-react.git"
+    "deploy": "gh-pages -d dist --repo git@github.com:Anand1bhatt/jioai-photos-react.git"
   },
   "dependencies": {
     "react": "^18.3.1",
