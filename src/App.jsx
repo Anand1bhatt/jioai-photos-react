@@ -158,17 +158,13 @@ function CheckIcon() {
   )
 }
 
-function JioMark({ size = 32 }) {
+function JioLogo({ size = 40 }) {
   return (
-    <div style={{
-      width: size, height: size, background: TEAL,
-      borderRadius: '50%', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', flexShrink: 0,
-    }}>
-      <span style={{ color: 'white', fontSize: size * 0.34, fontWeight: 900, letterSpacing: '-0.3px' }}>
-        jio
-      </span>
-    </div>
+    <img
+      src="./jio-logo.png"
+      alt="Jio"
+      style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0, display: 'block' }}
+    />
   )
 }
 
@@ -277,24 +273,161 @@ function PillBtn({ children, onClick, disabled, loading, style }) {
   )
 }
 
-// iOS-style permission dialog
-function IosAlert({ children, visible }) {
-  if (!visible) return null
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDESHOW BANNER — Figma node 239-1472
+// Animated fan of 5 photo cards; plays entry + looping float when active
+// ─────────────────────────────────────────────────────────────────────────────
+const SS = {
+  farRight:   'https://www.figma.com/api/mcp/asset/a59c63d3-446b-4420-94ae-795e9144f33f',
+  farLeft:    'https://www.figma.com/api/mcp/asset/b3e06bbb-bb4a-4bfb-917e-d9bef6145bc6',
+  innerLeft:  'https://www.figma.com/api/mcp/asset/9bd126db-48f1-4b9c-80c8-f59014f6e8d5',
+  innerRight: 'https://www.figma.com/api/mcp/asset/7f314dad-127e-4911-97b9-d06782e543bb',
+  center:     'https://www.figma.com/api/mcp/asset/17c8efd0-4365-4d72-95dc-8ba733f36ba4',
+  title:      'https://www.figma.com/api/mcp/asset/2f69aeb4-75b7-4f18-ae80-e5fe7905b8a6',
+}
+
+// Card definitions — back to front (z-order 1 → 3)
+// Each: [src, leftOffset, top, cardW, cardH, rotateDeg, blur, hasBorder,
+//        imgStyle, entryDelay, floatAnim, floatDur, floatStartDelay]
+const SS_CARDS = [
+  {
+    src: SS.farRight,
+    left: 'calc(50% + 119.24px)', top: 100,
+    cw: 124, ch: 200, rotate: 12.64, blur: 1.5, border: false,
+    imgStyle: { width:'100%', height:'100%', objectFit:'cover' },
+    ed:'0s', fa:'cardFloat0', fd:'4s', fs:'0.65s', z:1,
+  },
+  {
+    src: SS.farLeft,
+    left: 'calc(50% - 120.59px)', top: 100,
+    cw: 124, ch: 200, rotate: -12.64, blur: 1, border: false,
+    imgStyle: { position:'absolute', width:'100%', height:'110%', left:'-10%', top:'-0.14%', maxWidth:'none' },
+    ed:'0.1s', fa:'cardFloat1', fd:'3.7s', fs:'0.75s', z:1,
+  },
+  {
+    src: SS.innerLeft,
+    left: 'calc(50% - 76.47px)', top: 81,
+    cw: 144, ch: 232, rotate: -5.43, blur: 0.5, border: true,
+    imgStyle: { position:'absolute', width:'246%', height:'102%', left:'-114%', top:'-1%', maxWidth:'none' },
+    ed:'0.2s', fa:'cardFloat2', fd:'3.9s', fs:'0.85s', z:2,
+  },
+  {
+    src: SS.innerRight,
+    left: 'calc(50% + 71.28px)', top: 81,
+    cw: 144, ch: 232, rotate: 5, blur: 0.5, border: true,
+    imgStyle: { position:'absolute', width:'121%', height:'103%', left:'16%', top:'-3%', maxWidth:'none' },
+    ed:'0.3s', fa:'cardFloat3', fd:'4.3s', fs:'0.95s', z:2,
+  },
+]
+
+function SlideShowBanner({ isActive }) {
+  // `playing` drives all animations — avoids key-based remount flicker
+  const [playing, setPlaying] = useState(false)
+
+  useEffect(() => {
+    if (!isActive) {
+      setPlaying(false)
+      return
+    }
+    // Reset first, then start after 2 animation frames so the browser
+    // has painted the hidden state before kicking off the fan-in
+    setPlaying(false)
+    let r1, r2
+    r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => setPlaying(true))
+    })
+    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2) }
+  }, [isActive])
+
+  const entry = (delay) =>
+    playing ? `cardFanIn 0.65s ${delay} cubic-bezier(0.34,1.4,0.64,1) both` : 'none'
+  const float = (fa, fd, fs) =>
+    playing ? `${fa} ${fd} ${fs} ease-in-out infinite` : 'none'
+
   return (
-    <div style={{
-      position: 'absolute', inset: 0,
-      background: 'rgba(12,13,16,0.78)', zIndex: 100,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      animation: 'fadeIn 0.3s ease',
-    }}>
+    // BG matches app background → status bar colour is seamless
+    <div style={{ position:'relative', width:'100%', height:'100%', background: BG }}>
+
+      {/* ── Background cards (far → near) ── */}
+      {SS_CARDS.map((c, i) => (
+        <div key={i} style={{
+          position:'absolute', left:c.left, top:c.top,
+          transform:'translateX(-50%)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          zIndex: c.z,
+          willChange:'transform',
+        }}>
+          {/* Entry: starts invisible (opacity:0); animation-fill-mode:both overrides
+              inline opacity once it runs, so no visible flash */}
+          <div style={{
+            opacity: 0,
+            animation: entry(c.ed),
+            willChange:'transform, opacity',
+          }}>
+            {/* Float loop — starts exactly when entry finishes */}
+            <div style={{
+              animation: float(c.fa, c.fd, c.fs),
+              willChange:'transform',
+            }}>
+              {/* Static rotation */}
+              <div style={{ transform:`rotate(${c.rotate}deg)` }}>
+                {/* Blur lives on the static card body, NOT on any animated layer */}
+                <div style={{
+                  width:c.cw, height:c.ch, borderRadius:11,
+                  overflow:'hidden', position:'relative',
+                  filter: c.blur > 0 ? `blur(${c.blur}px)` : undefined,
+                  border: c.border ? '2px solid #000f1a' : 'none',
+                }}>
+                  <img src={c.src} alt="" style={{ display:'block', ...c.imgStyle }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* ── Center card ── */}
       <div style={{
-        width: 270, background: 'rgba(217,217,217,0.95)',
-        backdropFilter: 'blur(25px)', WebkitBackdropFilter: 'blur(25px)',
-        borderRadius: 14, overflow: 'hidden',
-        animation: 'alertIn 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+        position:'absolute', left:'calc(50% - 0.5px)', top:57,
+        transform:'translateX(-50%)', zIndex:3, willChange:'transform',
       }}>
-        {children}
+        <div style={{ opacity:0, animation: entry('0.4s'), willChange:'transform, opacity' }}>
+          <div style={{ animation: float('cardFloat4','5s','1.05s'), willChange:'transform' }}>
+            <div style={{
+              width:181, height:291, borderRadius:11,
+              border:'3px solid #000f1a', overflow:'hidden', position:'relative',
+            }}>
+              <img src={SS.center} alt=""
+                style={{ position:'absolute', width:'130%', height:'102%', left:'-13%', top:'-2%', maxWidth:'none' }} />
+              <div style={{
+                position:'absolute', inset:0, pointerEvents:'none',
+                background:'linear-gradient(to bottom, rgba(0,0,0,0.81) 18%, rgba(32,2,2,0.71) 32%, rgba(113,6,6,0) 42%)',
+              }} />
+              {/* Shimmer sweep — implies a video/slideshow is playing */}
+              <div style={{ position:'absolute', inset:0, overflow:'hidden', pointerEvents:'none' }}>
+                <div style={{
+                  position:'absolute', left:0, right:0, height:'50%',
+                  background:'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.09), rgba(255,255,255,0))',
+                  animation: playing ? 'centerShimmer 3.5s 1.5s ease-in-out infinite' : 'none',
+                }} />
+              </div>
+              <img src={SS.title} alt="Banaras Ki Shaam"
+                style={{
+                  position:'absolute', left:5, top:20, width:152, height:53,
+                  display:'block', maxWidth:'none',
+                  opacity:0, animation: playing ? 'titleReveal 0.55s 0.95s ease both' : 'none',
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Bottom gradient — blends into the dark panel below */}
+      <div style={{
+        position:'absolute', bottom:0, left:0, right:0, height:90, zIndex:10, pointerEvents:'none',
+        background:'linear-gradient(to bottom, transparent, #001d2e)',
+      }} />
     </div>
   )
 }
@@ -310,8 +443,6 @@ export default function App() {
   const [otpTimer, setOtpTimer]       = useState(29)
   const [otpCanResend, setOtpCanResend] = useState(false)
   const [carouselIdx, setCarouselIdx] = useState(0)
-  const [perm1, setPerm1]             = useState(false)
-  const [perm2, setPerm2]             = useState(false)
   const [signinLoading, setSigninLoading] = useState(false)
   const [otpLoading, setOtpLoading]   = useState(false)
   const [doneVisible, setDoneVisible] = useState(false)
@@ -443,19 +574,15 @@ export default function App() {
   function handleSubmitOtp() {
     if (otp.length < 4) return
     setOtpLoading(true)
-    setTimeout(() => { setOtpLoading(false); setPerm1(true) }, 1200)
-  }
-
-  function handlePerm1() {
-    setPerm1(false)
-    setTimeout(() => setPerm2(true), 300)
-  }
-
-  function handlePerm2() {
-    setPerm2(false)
     clearInterval(otpTimerRef.current)
-    setTimeout(() => goTo('carousel'), 300)
+    setTimeout(() => { setOtpLoading(false); goTo('carousel') }, 1200)
   }
+
+  // Auto-verify when all 6 digits entered
+  useEffect(() => {
+    if (otp.length === 6 && !otpLoading) handleSubmitOtp()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp])
 
   function handleNext() {
     if (carouselIdx < 3) setCarouselIdx(i => i + 1)
@@ -474,7 +601,6 @@ export default function App() {
     setPhone(''); setOtp(''); setLang('en')
     setCarouselIdx(0); setOtpCanResend(false)
     setSigninLoading(false); setOtpLoading(false)
-    setPerm1(false); setPerm2(false)
 
     Object.values(REFS).forEach(r => {
       const el = r.current
@@ -495,7 +621,7 @@ export default function App() {
     setTimeout(() => goTo('language'), 2400)
   }
 
-  // Swipe for carousel
+  // Swipe for carousel — touch (mobile) + mouse drag (desktop)
   const onTouchStart = e => setTouchStart(e.touches[0].clientX)
   const onTouchEnd   = e => {
     const diff = touchStart - e.changedTouches[0].clientX
@@ -504,6 +630,20 @@ export default function App() {
       else if (diff < 0 && carouselIdx > 0) setCarouselIdx(i => i - 1)
     }
   }
+  const dragRef = useRef(null)
+  const carouselIdxRef = useRef(carouselIdx)
+  useEffect(() => { carouselIdxRef.current = carouselIdx }, [carouselIdx])
+  const onMouseDown = useCallback(e => { dragRef.current = e.clientX }, [])
+  const onMouseUp   = useCallback(e => {
+    if (dragRef.current === null) return
+    const diff = dragRef.current - e.clientX
+    dragRef.current = null
+    if (Math.abs(diff) > 40) {
+      const idx = carouselIdxRef.current
+      if (diff > 0 && idx < 3) setCarouselIdx(i => i + 1)
+      else if (diff < 0 && idx > 0) setCarouselIdx(i => i - 1)
+    }
+  }, [])
 
   // Derive helpers
   const phoneOk  = phone.length === 10
@@ -558,8 +698,8 @@ export default function App() {
               <p style={{ marginTop:8, fontSize:14, color:'rgba(255,255,255,0.8)', lineHeight:1.5 }}>{t.lang.subtitle}</p>
             </div>
             {/* Photo collage */}
-            <div style={{ position:'absolute', top:199, left:0, right:0, height:371, overflow:'hidden' }}>
-              <img src={ASSETS.langCollage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            <div style={{ position:'absolute', top:209, left:0, right:0, height:361, overflow:'hidden' }}>
+              <img src={ASSETS.langCollage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top center' }} />
             </div>
             {/* Gradient fade */}
             <div style={{ position:'absolute', top:460, left:0, right:0, height:80, background:'linear-gradient(to bottom,transparent,#001d2e)', pointerEvents:'none', zIndex:1 }} />
@@ -587,7 +727,7 @@ export default function App() {
           <div ref={signinRef} style={{ position:'absolute', inset:0, background:BG }}>
             <div style={{ height:'100%', display:'flex', flexDirection:'column', padding:'62px 24px 0' }}>
               <div style={{ flex:1, display:'flex', flexDirection:'column', gap:20, paddingTop:10 }}>
-                <JioMark size={32} />
+                <JioLogo size={48} />
                 <div>
                   <h1 style={{ fontSize:28, fontWeight:900, color:TEAL, lineHeight:1.2 }}>{t.signin.title}</h1>
                   <p style={{ marginTop:8, fontSize:14, color:'rgba(255,255,255,0.8)' }}>{t.signin.subtitle}</p>
@@ -615,7 +755,7 @@ export default function App() {
           <div ref={otpRef} style={{ position:'absolute', inset:0, background:BG }}>
             <div style={{ height:'100%', display:'flex', flexDirection:'column', padding:'62px 24px 0' }}>
               <div style={{ flex:1, display:'flex', flexDirection:'column', gap:20, paddingTop:10 }}>
-                <JioMark size={32} />
+                <JioLogo size={48} />
                 <div>
                   <h1 style={{ fontSize:28, fontWeight:900, color:TEAL, lineHeight:1.2 }}>{t.otp.title}</h1>
                   <p style={{ marginTop:8, fontSize:14, color:'rgba(255,255,255,0.8)' }}>
@@ -652,69 +792,14 @@ export default function App() {
                   </p>
                 </div>
               </div>
+              {/* Loading state shown at bottom while verifying */}
               <div style={{ paddingBottom:40, display:'flex', flexDirection:'column', gap:16 }}>
                 <TermsText parts={t.otp.terms} />
-                <PillBtn onClick={handleSubmitOtp} disabled={!otpOk} loading={otpLoading}>
+                <PillBtn disabled={!otpOk} loading={otpLoading}>
                   {otpLoading ? t.otp.verifying : t.otp.submit}
                 </PillBtn>
               </div>
             </div>
-
-            {/* Permission dialog 1 */}
-            <IosAlert visible={perm1}>
-              <div style={{ padding:'19px 16px 0', textAlign:'center' }}>
-                <p style={{ fontSize:17, fontWeight:600, color:'#000', lineHeight:1.3, letterSpacing:'-0.43px', marginBottom:4 }}>{t.perm1.title}</p>
-                <p style={{ fontSize:13, color:'#000', lineHeight:1.4 }}>{t.perm1.body}</p>
-              </div>
-              <div style={{ padding:'12px 16px 15px', display:'flex', flexDirection:'column', gap:10 }}>
-                <img src={ASSETS.permPhotos} alt="" style={{ width:'100%', borderRadius:8, display:'block' }} />
-                <div>
-                  <p style={{ fontSize:17, fontWeight:600, color:'#000', textAlign:'center' }}>{t.perm1.count}</p>
-                  <p style={{ fontSize:13, color:'#000', textAlign:'center', lineHeight:1.4, marginTop:4 }}>{t.perm1.countBody}</p>
-                </div>
-              </div>
-              <div style={{ display:'flex', flexDirection:'column', borderTop:'0.333px solid rgba(84,84,86,0.34)' }}>
-                {[
-                  { key:'limit', bold:false },
-                  { key:'allow', bold:true  },
-                  { key:'deny',  bold:false },
-                ].map(({ key, bold }, i) => (
-                  <button key={key} onClick={handlePerm1} style={{
-                    border:'none', background:'transparent', padding:0, height:44,
-                    cursor:'pointer', fontSize:17, color:'#007aff',
-                    fontWeight: bold ? 600 : 400,
-                    fontFamily:'-apple-system, SF Pro, sans-serif',
-                    borderTop: i > 0 ? '0.333px solid rgba(84,84,86,0.34)' : 'none',
-                  }}>
-                    {t.perm1[key]}
-                  </button>
-                ))}
-              </div>
-            </IosAlert>
-
-            {/* Permission dialog 2 */}
-            <IosAlert visible={perm2}>
-              <div style={{ padding:'19px 16px 15px', textAlign:'center' }}>
-                <p style={{ fontSize:17, fontWeight:600, color:'#000', lineHeight:1.3, letterSpacing:'-0.43px', marginBottom:8 }}>{t.perm2.title}</p>
-                <p style={{ fontSize:13, color:'#000', lineHeight:1.4 }}>{t.perm2.body}</p>
-              </div>
-              <div style={{ display:'flex', borderTop:'0.333px solid rgba(84,84,86,0.34)' }}>
-                {[
-                  { key:'deny',  bold:false },
-                  { key:'allow', bold:true  },
-                ].map(({ key, bold }, i) => (
-                  <button key={key} onClick={handlePerm2} style={{
-                    flex:1, border:'none', background:'transparent', padding:0, height:44,
-                    cursor:'pointer', fontSize:17, color:'#007aff',
-                    fontWeight: bold ? 600 : 400,
-                    fontFamily:'-apple-system, SF Pro, sans-serif',
-                    borderLeft: i > 0 ? '0.333px solid rgba(84,84,86,0.34)' : 'none',
-                  }}>
-                    {t.perm2[key]}
-                  </button>
-                ))}
-              </div>
-            </IosAlert>
           </div>
 
           {/* ── 5–8. CAROUSEL ── (flex layout = image fills all space, no gap) */}
@@ -722,13 +807,17 @@ export default function App() {
             ref={carouselRef}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
-            style={{ position:'absolute', inset:0, background:BG, display:'flex', flexDirection:'column' }}
+            onMouseDown={onMouseDown}
+            onMouseUp={onMouseUp}
+            onMouseLeave={() => { dragRef.current = null }}
+            style={{ position:'absolute', inset:0, background:BG, display:'flex', flexDirection:'column',
+              userSelect:'none', cursor:'grab' }}
           >
-            {/* Reserve space for status bar overlay */}
-            <div style={{ height:50, flexShrink:0 }} />
+            {/* Reserve space for status bar overlay + 25px image nudge */}
+            <div style={{ height:75, flexShrink:0 }} />
 
-            {/* Image fills ALL remaining space above the bottom panel */}
-            <div style={{ flex:1, overflow:'hidden', position:'relative', minHeight:0 }}>
+            {/* Image — fixed height so bottom panel always has breathing room */}
+            <div style={{ height:420, flexShrink:0, overflow:'hidden', position:'relative' }}>
               {/* Sliding strip */}
               <div style={{
                 display:'flex',
@@ -739,7 +828,10 @@ export default function App() {
               }}>
                 {SLIDE_IMGS.map((src, i) => (
                   <div key={i} style={{ width:`${100 / SLIDE_IMGS.length}%`, height:'100%', overflow:'hidden', flexShrink:0 }}>
-                    <img src={src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', animation:'imgZoom 6s ease-in-out infinite' }} />
+                    {i === 1
+                      ? <SlideShowBanner isActive={carouselIdx === 1} />
+                      : <img src={src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', animation:'imgZoom 6s ease-in-out infinite' }} />
+                    }
                   </div>
                 ))}
               </div>
@@ -753,39 +845,39 @@ export default function App() {
               </button>
             </div>
 
-            {/* Bottom panel — no gap because flex fills the image */}
-            <div style={{ flexShrink:0, background:BG, borderRadius:'32px 32px 0 0', padding:'20px 24px 40px', display:'flex', flexDirection:'column', gap:16 }}>
-              {/* Animated text on slide change */}
-              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                <h2
-                  key={`title-${carouselIdx}`}
-                  style={{ fontSize:24, fontWeight:900, color:'white', textAlign:'center', lineHeight:1.2, animation:'slideUpFade 0.35s ease' }}>
-                  {slide.title}
-                </h2>
-                <p
-                  key={`desc-${carouselIdx}`}
-                  style={{ fontSize:14, color:'rgba(255,255,255,0.8)', textAlign:'center', lineHeight:1.45, animation:'slideUpFade 0.35s 0.05s ease both' }}>
-                  {slide.desc}
-                </p>
+            {/* Bottom panel — text+dots grouped tight; button pushed to bottom */}
+            <div style={{ flex:1, background:BG, borderRadius:'32px 32px 0 0', padding:'24px 24px 44px', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+              {/* Title + desc + dots all grouped close together */}
+              <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  <h2
+                    key={`title-${carouselIdx}`}
+                    style={{ fontSize:24, fontWeight:900, color:'white', textAlign:'center', lineHeight:1.2, animation:'slideUpFade 0.35s ease' }}>
+                    {slide.title}
+                  </h2>
+                  <p
+                    key={`desc-${carouselIdx}`}
+                    style={{ fontSize:14, color:'rgba(255,255,255,0.8)', textAlign:'center', lineHeight:1.45, animation:'slideUpFade 0.35s 0.05s ease both' }}>
+                    {slide.desc}
+                  </p>
+                </div>
+                {/* Dots sit just 16px below the description */}
+                <div style={{ display:'flex', gap:6, justifyContent:'center', alignItems:'center' }}>
+                  {t.carousel.slides.map((_, i) => (
+                    <div key={i} style={{
+                      height:8, borderRadius:100,
+                      width: i === carouselIdx ? 26 : 8,
+                      background: i === carouselIdx ? '#1cbaba' : 'rgba(191,248,247,0.5)',
+                      transition:'width 0.35s cubic-bezier(0.4,0,0.2,1), background 0.3s',
+                    }} />
+                  ))}
+                </div>
               </div>
-              {/* Progress dots */}
-              <div style={{ display:'flex', gap:6, justifyContent:'center', alignItems:'center' }}>
-                {t.carousel.slides.map((_, i) => (
-                  <div key={i} style={{
-                    height:8, borderRadius:100,
-                    width: i === carouselIdx ? 26 : 8,
-                    background: i === carouselIdx ? '#1cbaba' : 'rgba(191,248,247,0.5)',
-                    transition:'width 0.35s cubic-bezier(0.4,0,0.2,1), background 0.3s',
-                  }} />
-                ))}
-              </div>
-              {/* CTA row */}
+              {/* CTA row pinned to bottom via space-between on parent */}
               <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-                <button
-                  onClick={handleNext}
-                  style={{ flex:1, height:48, background:BG2, color:TEAL, border:'none', borderRadius:9999, fontSize:18, fontWeight:700, cursor:'pointer' }}>
+                <PillBtn onClick={handleNext} style={{ borderRadius:9999 }}>
                   {slide.cta}
-                </button>
+                </PillBtn>
                 <button
                   onClick={handleNext}
                   style={{ width:48, height:48, background:BG2, border:'none', borderRadius:9999, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>

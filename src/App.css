@@ -53,5 +53,33 @@ html, body, #root {
 ::-webkit-scrollbar { display: none; }
 ::selection { background: rgba(39,139,193,0.3); }
 
+/* ── Slideshow banner animations ── */
+
+/* Entry: cards fan in from slightly below, fading + scaling up */
+@keyframes cardFanIn {
+  from { opacity: 0; transform: translateY(28px) scale(0.88); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* Idle float loops — each card has its own amplitude and speed */
+@keyframes cardFloat0 { 0%,100%{ transform:translateY(0px) }  50%{ transform:translateY(-8px) } }
+@keyframes cardFloat1 { 0%,100%{ transform:translateY(0px) }  50%{ transform:translateY(-7px) } }
+@keyframes cardFloat2 { 0%,100%{ transform:translateY(0px) }  50%{ transform:translateY(-5px) } }
+@keyframes cardFloat3 { 0%,100%{ transform:translateY(0px) }  50%{ transform:translateY(-6px) } }
+@keyframes cardFloat4 { 0%,100%{ transform:translateY(0px) }  50%{ transform:translateY(-3px) } }
+
+/* Center card: video-shimmer implies a slideshow is playing */
+@keyframes centerShimmer {
+  0%   { opacity: 0;    transform: translateY(-100%); }
+  25%  { opacity: 0.12; }
+  100% { opacity: 0;    transform: translateY(250%);  }
+}
+
+/* Title text reveal */
+@keyframes titleReveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
 button { font-family: inherit; }
 input  { font-family: inherit; }
